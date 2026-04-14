@@ -49,15 +49,15 @@ fileInput.addEventListener('change', function(e) {
 
 // Step 1: Initialize FFmpeg with LOCAL files
 async function init() {
-    console.log("1. Init süreci başladı...");
+    console.log("1. Init process started...");
     const status = document.getElementById('status');
     
-    // GitHub Pages ve Localhost uyumlu BASE_PATH
+    // Create a base path compatible with both GitHub Pages and localhost
     const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
 
-    // SİHİRLİ FONKSİYON: Dosyayı indirip yerel bir "hafıza linkine" çevirir
+    // MAGIC FUNCTION: Downloads the file and converts it to a local memory link (Blob URL)
     const toBlobURL = async (url, type) => {
-        console.log(`- İndiriliyor: ${url}`);
+        console.log(`- Downloading: ${url}`);
         const response = await fetch(url);
         const blob = await response.blob();
         return URL.createObjectURL(new Blob([blob], { type }));
@@ -66,30 +66,33 @@ async function init() {
     try {
         status.innerText = "⚡ Loading secure engine components...";
 
-        // Dosyaları önce tarayıcı hafızasına çekiyoruz
+        // Step 1: Force-download files into browser memory
+        // This bypasses the library's tendency to skip to unpkg.com
         const coreURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.js`, 'text/javascript');
         const wasmURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.wasm`, 'application/wasm');
         const workerURL = await toBlobURL(`${BASE_PATH}/js/worker.js`, 'text/javascript');
 
-        console.log("2. Dosyalar hafızaya alındı, yükleme başlıyor...");
+        console.log("2. Files internalized to memory, starting FFmpeg load...");
 
-        // ARTIK KÜTÜPHANE DIŞARIYA KAÇAMAYACAK
+        // Step 2: Load FFmpeg using these internalized "Blob" links
+        // The library cannot escape to unpkg now because we provide explicit local Blobs
         await ffmpeg.load({
             coreURL,
             wasmURL,
             workerURL
         });
 
-        console.log("3. Başarılı!");
+        console.log("3. Success! FFmpeg is ready.");
         isWasmLoaded = true;
         status.innerText = "✅ System ready. Select a video.";
         status.style.color = "#2da44e";
         setButtonsState(false);
     } catch (err) {
-        console.error("4. KRİTİK HATA:", err);
+        console.error("4. CRITICAL ERROR:", err);
         status.innerText = "❌ Initialization failed.";
     }
 }
+
 
 
 
