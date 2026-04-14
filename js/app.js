@@ -1,6 +1,7 @@
+// js/app.js en üst satırlar
 import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-
 import { fetchFile, toBlobURL } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
 
 
 // UI Elements
@@ -53,26 +54,36 @@ fileInput.addEventListener('change', function(e) {
 // Initialize WASM from CDN (with CORS bypass magic)
 async function init() {
     try {
-        const coreBaseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-        const ffmpegBaseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
-
-        await ffmpeg.load({
-            coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-            // WORKER İÇİN ÖZEL ÖNLEM:
-            workerURL: await toBlobURL(`${ffmpegBaseURL}/worker.js`, 'text/javascript')
+        ffmpeg.on('log', ({ message }) => console.log(message));
+        ffmpeg.on('progress', ({ progress: p }) => {
+            progressBar.value = p * 100;
+            statusDisplay.innerText = `Processing: ${Math.round(p * 100)}%`;
         });
 
-        // Başarılı olursa buraya geçer
+        // unpkg yerine bazen daha stabil olan cdnjs veya doğrudan unpkg'in spesifik versiyonlarını deneyelim
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        
+        // ÖNEMLİ: toBlobURL her zaman güvenlidir ancak await sırasına dikkat edilmelidir
+        const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+        const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+        const workerURL = await toBlobURL('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', 'text/javascript');
+
+        await ffmpeg.load({
+            coreURL,
+            wasmURL,
+            workerURL
+        });
+
         isWasmLoaded = true;
         statusDisplay.innerText = "✅ System ready. Select a video.";
-        // ...
+        statusDisplay.style.color = "#2da44e";
+        setButtonsState(false); 
     } catch (err) {
-        // Hata devam ederse burası çalışır
         statusDisplay.innerText = "❌ Initialization failed.";
-        console.error(err);
+        console.error("FFmpeg Load Detail:", err);
     }
 }
+
 
 
 
