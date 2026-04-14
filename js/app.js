@@ -1,8 +1,5 @@
-// js/app.js en üst satırlar
 import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-import { fetchFile, toBlobURL } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
-
-
+import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
 
 // UI Elements
 const ffmpeg = new FFmpeg();
@@ -50,8 +47,7 @@ fileInput.addEventListener('change', function(e) {
     downloadArea.innerHTML = '';
 });
 
-
-// Initialize WASM from CDN (with CORS bypass magic)
+// Initialize WASM from local ./js/ folder
 async function init() {
     try {
         ffmpeg.on('log', ({ message }) => console.log(message));
@@ -60,18 +56,11 @@ async function init() {
             statusDisplay.innerText = `Processing: ${Math.round(p * 100)}%`;
         });
 
-        // unpkg yerine bazen daha stabil olan cdnjs veya doğrudan unpkg'in spesifik versiyonlarını deneyelim
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-        
-        // ÖNEMLİ: toBlobURL her zaman güvenlidir ancak await sırasına dikkat edilmelidir
-        const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-        const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-        const workerURL = await toBlobURL('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js', 'text/javascript');
-
+        // Artık tarayıcının güvenlik duvarını aşmak için dosyaları kendi klasörümüzden yüklüyoruz
         await ffmpeg.load({
-            coreURL,
-            wasmURL,
-            workerURL
+            coreURL: './js/ffmpeg-core.js',
+            wasmURL: './js/ffmpeg-core.wasm',
+            workerURL: './js/worker.js'
         });
 
         isWasmLoaded = true;
@@ -80,13 +69,9 @@ async function init() {
         setButtonsState(false); 
     } catch (err) {
         statusDisplay.innerText = "❌ Initialization failed.";
-        console.error("FFmpeg Load Detail:", err);
+        console.error("FFmpeg Load Error:", err);
     }
 }
-
-
-
-
 
 // Main Processing Function
 async function processVideo(mode) {
@@ -106,8 +91,9 @@ async function processVideo(mode) {
         
         try { await ffmpeg.createDir('/work'); } catch (e) {}
         
-        // Mount file to WASM filesystem
-        await ffmpeg.mount('WORKERFS', { files: [videoFile] }, '/work');
+        // Fetch file data for the WASM filesystem
+        const fileData = await fetchFile(videoFile);
+        await ffmpeg.writeFile(`/work/${videoFile.name}`, fileData);
         
         const inputPath = `/work/${videoFile.name}`;
         let command = ['-i', inputPath];
@@ -137,7 +123,7 @@ async function processVideo(mode) {
                     '-preset', 'ultrafast',
                     '-tune', 'fastdecode',
                     '-pix_fmt', 'yuv420p',
-                    '-threads', '2' // Thermal Protection (Heat Shield)
+                    '-threads', '2' 
                 );
             }
         } else if (mode === 'high_compression') {
@@ -150,21 +136,14 @@ async function processVideo(mode) {
 
         command.push('output.mp4');
         const startTime = Date.now();
-        
-        // Execute FFmpeg
         await ffmpeg.exec(command);
-        
         const processTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-        // Read the result
         const outputData = await ffmpeg.readFile('output.mp4');
         const outputSizeMB = outputData.length / (1024 * 1024);
         const reductionPercent = (((inputSizeMB - outputSizeMB) / inputSizeMB) * 100).toFixed(0);
-        
-        // Create downloadable URL
         const videoURL = URL.createObjectURL(new Blob([outputData.buffer], { type: 'video/mp4' }));
 
-        // Update UI
         statusDisplay.innerText = `✨ Done (${processTime}s)`;
         
         document.getElementById('stat-before').innerText = `${inputSizeMB.toFixed(1)} MB`;
@@ -183,25 +162,22 @@ async function processVideo(mode) {
             </a>`;
             
     } catch (err) {
-        statusDisplay.innerText = "❌ Processing error. Check console.";
+        statusDisplay.innerText = "❌ Processing error.";
         console.error(err);
     } finally {
-        // Cleanup memory
         try { 
-            await ffmpeg.unmount('/work');
+            await ffmpeg.deleteFile(`/work/${videoFile.name}`);
+            await ffmpeg.deleteFile('output.mp4');
             await ffmpeg.deleteDir('/work'); 
         } catch (e) {}
-        
         setButtonsState(false);
         progressBar.style.display = "none";
     }
 }
 
-// Button Listeners
 btns.github.onclick = () => processVideo('smart_github');
 btns.high.onclick = () => processVideo('high_compression');
 btns.balanced.onclick = () => processVideo('balanced');
 btns.quality.onclick = () => processVideo('high_quality');
 
-// Boot the system
 init();
