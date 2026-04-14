@@ -49,42 +49,48 @@ fileInput.addEventListener('change', function(e) {
 
 // Step 1: Initialize FFmpeg with LOCAL files
 async function init() {
+    console.log("1. Init süreci başladı...");
+    const status = document.getElementById('status');
+    
+    // GitHub Pages ve Localhost uyumlu BASE_PATH
+    const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
+
+    // SİHİRLİ FONKSİYON: Dosyayı indirip yerel bir "hafıza linkine" çevirir
+    const toBlobURL = async (url, type) => {
+        console.log(`- İndiriliyor: ${url}`);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return URL.createObjectURL(new Blob([blob], { type }));
+    };
+
     try {
-        const status = document.getElementById('status');
-        
-        // 1. Önce dosya yollarını tam oluşturuyoruz
-        const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
-        
-        // 2. DOSYALARI ÇEKİP BLOB URL'YE ÇEVİRİYORUZ (SİHİRLİ DOKUNUŞ)
-        // Bu fonksiyon tarayıcının "başka yerden dosya geliyor" uyarısını engeller
-        const toBlobURL = async (url, type) => {
-            const buf = await fetch(url).then(res => res.arrayBuffer());
-            return URL.createObjectURL(new Blob([buf], { type }));
-        };
+        status.innerText = "⚡ Loading secure engine components...";
 
-        status.innerText = "⚡ Loading engine components...";
-
-        // Dosyaları önce indirip tarayıcı hafızasına alıyoruz
+        // Dosyaları önce tarayıcı hafızasına çekiyoruz
         const coreURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.js`, 'text/javascript');
         const wasmURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.wasm`, 'application/wasm');
         const workerURL = await toBlobURL(`${BASE_PATH}/js/worker.js`, 'text/javascript');
 
-        // 3. ŞİMDİ YÜKLÜYORUZ
+        console.log("2. Dosyalar hafızaya alındı, yükleme başlıyor...");
+
+        // ARTIK KÜTÜPHANE DIŞARIYA KAÇAMAYACAK
         await ffmpeg.load({
             coreURL,
             wasmURL,
             workerURL
         });
 
+        console.log("3. Başarılı!");
         isWasmLoaded = true;
         status.innerText = "✅ System ready. Select a video.";
         status.style.color = "#2da44e";
         setButtonsState(false);
     } catch (err) {
-        console.error("KRİTİK HATA:", err);
-        document.getElementById('status').innerText = "❌ Initialization failed.";
+        console.error("4. KRİTİK HATA:", err);
+        status.innerText = "❌ Initialization failed.";
     }
 }
+
 
 
 
