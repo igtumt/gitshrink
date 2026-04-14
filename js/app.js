@@ -1,5 +1,6 @@
-import { FFmpeg } from '../node_modules/@ffmpeg/ffmpeg/dist/esm/index.js';
-import { fetchFile } from '../node_modules/@ffmpeg/util/dist/esm/index.js';
+import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
+import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
 
 // UI Elements
 const ffmpeg = new FFmpeg();
@@ -56,11 +57,11 @@ async function init() {
             statusDisplay.innerText = `Processing: ${Math.round(p * 100)}%`;
         });
 
-        // Tarayıcı root dizininden (/) okuyacak şekilde yollar
+        // Artık yerel klasörleri değil, unpkg CDN'lerini okuyacak
         await ffmpeg.load({
-            coreURL: '/node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js',
-            wasmURL: '/node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm',
-            workerURL: '/node_modules/@ffmpeg/ffmpeg/dist/esm/worker.js'
+            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+            wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm',
+            workerURL: 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js'
         });
 
         isWasmLoaded = true;
@@ -72,6 +73,7 @@ async function init() {
         console.error("FFmpeg Load Error:", err);
     }
 }
+
 
 // Main Processing Function
 async function processVideo(mode) {
