@@ -1,5 +1,6 @@
 import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
+import { fetchFile, toBlobURL } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
 
 
 // UI Elements
@@ -48,7 +49,8 @@ fileInput.addEventListener('change', function(e) {
     downloadArea.innerHTML = '';
 });
 
-// Initialize WASM from local node_modules
+
+// Initialize WASM from CDN (with CORS bypass magic)
 async function init() {
     try {
         ffmpeg.on('log', ({ message }) => console.log(message));
@@ -57,11 +59,14 @@ async function init() {
             statusDisplay.innerText = `Processing: ${Math.round(p * 100)}%`;
         });
 
-        // Artık yerel klasörleri değil, unpkg CDN'lerini okuyacak
+        // Sihir Burada: Dosyaları indirip sanki senin sitendeymiş gibi gösteriyoruz
+        const coreBaseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        const ffmpegBaseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
+
         await ffmpeg.load({
-            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
-            wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm',
-            workerURL: 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js'
+            coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            workerURL: await toBlobURL(`${ffmpegBaseURL}/worker.js`, 'text/javascript')
         });
 
         isWasmLoaded = true;
@@ -73,6 +78,7 @@ async function init() {
         console.error("FFmpeg Load Error:", err);
     }
 }
+
 
 
 // Main Processing Function
