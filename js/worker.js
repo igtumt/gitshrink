@@ -1,1 +1,161 @@
-var threadInfoStruct=0;var selfThreadId=0;var parentThreadId=0;var Module={};function threadPrintErr(){var text=Array.prototype.slice.call(arguments).join(" ");console.error(text)}function threadAlert(){var text=Array.prototype.slice.call(arguments).join(" ");postMessage({cmd:"alert",text:text,threadId:selfThreadId})}var err=threadPrintErr;this.alert=threadAlert;Module["instantiateWasm"]=function(info,receiveInstance){var instance=new WebAssembly.Instance(Module["wasmModule"],info);Module["wasmModule"]=null;receiveInstance(instance);return instance.exports};this.onmessage=function(e){try{if(e.data.cmd==="load"){Module["wasmModule"]=e.data.wasmModule;Module["wasmMemory"]=e.data.wasmMemory;Module["buffer"]=Module["wasmMemory"].buffer;Module["ENVIRONMENT_IS_PTHREAD"]=true;if(typeof e.data.urlOrBlob==="string"){importScripts(e.data.urlOrBlob)}else{var objectUrl=URL.createObjectURL(e.data.urlOrBlob);importScripts(objectUrl);URL.revokeObjectURL(objectUrl)}createFFmpegCore(Module).then(function(instance){Module=instance;postMessage({"cmd":"loaded"})})}else if(e.data.cmd==="objectTransfer"){Module["PThread"].receiveObjectTransfer(e.data)}else if(e.data.cmd==="run"){Module["__performance_now_clock_drift"]=performance.now()-e.data.time;threadInfoStruct=e.data.threadInfoStruct;Module["registerPthreadPtr"](threadInfoStruct,/*isMainBrowserThread=*/0,/*isMainRuntimeThread=*/0);selfThreadId=e.data.selfThreadId;parentThreadId=e.data.parentThreadId;var max=e.data.stackBase;var top=e.data.stackBase+e.data.stackSize;Module["establishStackSpace"](top,max);Module["_emscripten_tls_init"]();Module["PThread"].receiveObjectTransfer(e.data);Module["PThread"].setThreadStatus(Module["_pthread_self"](),1);/*EM_THREAD_STATUS_RUNNING*/try{var result=Module["dynCall"]("ii",e.data.start_routine,[e.data.arg]);if(!Module["getNoExitRuntime"]())Module["PThread"].threadExit(result)}catch(ex){if(ex==="Canceled!"){Module["PThread"].threadCancel()}else if(ex!="unwind"){Atomics.store(Module["HEAPU32"],(threadInfoStruct+4)>>/*C_STRUCTS.pthread.threadExitCode*/2,(ex instanceof Module["ExitStatus"])?ex.status:-2);/*A custom entry specific to Emscripten denoting that the thread crashed.*/Atomics.store(Module["HEAPU32"],(threadInfoStruct+0)>>/*C_STRUCTS.pthread.threadStatus*/2,1);Module["_emscripten_futex_wake"](threadInfoStruct+0,/*C_STRUCTS.pthread.threadStatus*/2147483647);if(!(ex instanceof Module["ExitStatus"]))throw ex}}}else if(e.data.cmd==="cancel"){if(threadInfoStruct){Module["PThread"].threadCancel()}}else if(e.data.target==="setimmediate"){}else if(e.data.cmd==="processThreadQueue"){if(threadInfoStruct){Module["_emscripten_current_thread_process_queued_calls"]()}}else{err("worker.js received unknown command "+e.data.cmd);err(e.data)}}catch(ex){err("worker.js onmessage() captured an uncaught exception: "+ex);if(ex&&ex.stack)err(ex.stack);throw ex}};if(typeof process==="object"&&typeof process.versions==="object"&&typeof process.versions.node==="string"){self={location:{href:__filename}};var onmessage=this.onmessage;var nodeWorkerThreads=require("worker_threads");global.Worker=nodeWorkerThreads.Worker;var parentPort=nodeWorkerThreads.parentPort;parentPort.on("message",function(data){onmessage({data:data})});var nodeFS=require("fs");var nodeRead=function(filename){return nodeFS.readFileSync(filename,"utf8")};function globalEval(x){global.require=require;global.Module=Module;eval.call(null,x)}importScripts=function(f){globalEval(nodeRead(f))};postMessage=function(msg){parentPort.postMessage(msg)};if(typeof performance==="undefined"){performance={now:function(){return Date.now()}}}}
+/// <reference no-default-lib="true" />
+/// <reference lib="esnext" />
+/// <reference lib="webworker" />
+import { CORE_URL, FFMessageType } from "./const.js";
+import { ERROR_UNKNOWN_MESSAGE_TYPE, ERROR_NOT_LOADED, ERROR_IMPORT_FAILURE, } from "./errors.js";
+let ffmpeg;
+const load = async ({ coreURL: _coreURL, wasmURL: _wasmURL, workerURL: _workerURL, }) => {
+    const first = !ffmpeg;
+    try {
+        if (!_coreURL)
+            _coreURL = CORE_URL;
+        // when web worker type is `classic`.
+        importScripts(_coreURL);
+    }
+    catch {
+        if (!_coreURL)
+            _coreURL = CORE_URL.replace('/umd/', '/esm/');
+        // when web worker type is `module`.
+        self.createFFmpegCore = (await import(
+        /* webpackIgnore: true */ /* @vite-ignore */ _coreURL)).default;
+        if (!self.createFFmpegCore) {
+            throw ERROR_IMPORT_FAILURE;
+        }
+    }
+    const coreURL = _coreURL;
+    const wasmURL = _wasmURL ? _wasmURL : _coreURL.replace(/.js$/g, ".wasm");
+    const workerURL = _workerURL
+        ? _workerURL
+        : _coreURL.replace(/.js$/g, ".worker.js");
+    ffmpeg = await self.createFFmpegCore({
+        // Fix `Overload resolution failed.` when using multi-threaded ffmpeg-core.
+        // Encoded wasmURL and workerURL in the URL as a hack to fix locateFile issue.
+        mainScriptUrlOrBlob: `${coreURL}#${btoa(JSON.stringify({ wasmURL, workerURL }))}`,
+    });
+    ffmpeg.setLogger((data) => self.postMessage({ type: FFMessageType.LOG, data }));
+    ffmpeg.setProgress((data) => self.postMessage({
+        type: FFMessageType.PROGRESS,
+        data,
+    }));
+    return first;
+};
+const exec = ({ args, timeout = -1 }) => {
+    ffmpeg.setTimeout(timeout);
+    ffmpeg.exec(...args);
+    const ret = ffmpeg.ret;
+    ffmpeg.reset();
+    return ret;
+};
+const writeFile = ({ path, data }) => {
+    ffmpeg.FS.writeFile(path, data);
+    return true;
+};
+const readFile = ({ path, encoding }) => ffmpeg.FS.readFile(path, { encoding });
+// TODO: check if deletion works.
+const deleteFile = ({ path }) => {
+    ffmpeg.FS.unlink(path);
+    return true;
+};
+const rename = ({ oldPath, newPath }) => {
+    ffmpeg.FS.rename(oldPath, newPath);
+    return true;
+};
+// TODO: check if creation works.
+const createDir = ({ path }) => {
+    ffmpeg.FS.mkdir(path);
+    return true;
+};
+const listDir = ({ path }) => {
+    const names = ffmpeg.FS.readdir(path);
+    const nodes = [];
+    for (const name of names) {
+        const stat = ffmpeg.FS.stat(`${path}/${name}`);
+        const isDir = ffmpeg.FS.isDir(stat.mode);
+        nodes.push({ name, isDir });
+    }
+    return nodes;
+};
+// TODO: check if deletion works.
+const deleteDir = ({ path }) => {
+    ffmpeg.FS.rmdir(path);
+    return true;
+};
+const mount = ({ fsType, options, mountPoint }) => {
+    const str = fsType;
+    const fs = ffmpeg.FS.filesystems[str];
+    if (!fs)
+        return false;
+    ffmpeg.FS.mount(fs, options, mountPoint);
+    return true;
+};
+const unmount = ({ mountPoint }) => {
+    ffmpeg.FS.unmount(mountPoint);
+    return true;
+};
+self.onmessage = async ({ data: { id, type, data: _data }, }) => {
+    const trans = [];
+    let data;
+    try {
+        if (type !== FFMessageType.LOAD && !ffmpeg)
+            throw ERROR_NOT_LOADED; // eslint-disable-line
+        switch (type) {
+            case FFMessageType.LOAD:
+                data = await load(_data);
+                break;
+            case FFMessageType.EXEC:
+                data = exec(_data);
+                break;
+            case FFMessageType.WRITE_FILE:
+                data = writeFile(_data);
+                break;
+            case FFMessageType.READ_FILE:
+                data = readFile(_data);
+                break;
+            case FFMessageType.DELETE_FILE:
+                data = deleteFile(_data);
+                break;
+            case FFMessageType.RENAME:
+                data = rename(_data);
+                break;
+            case FFMessageType.CREATE_DIR:
+                data = createDir(_data);
+                break;
+            case FFMessageType.LIST_DIR:
+                data = listDir(_data);
+                break;
+            case FFMessageType.DELETE_DIR:
+                data = deleteDir(_data);
+                break;
+            case FFMessageType.MOUNT:
+                data = mount(_data);
+                break;
+            case FFMessageType.UNMOUNT:
+                data = unmount(_data);
+                break;
+            default:
+                throw ERROR_UNKNOWN_MESSAGE_TYPE;
+        }
+    }
+    catch (e) {
+        self.postMessage({
+            id,
+            type: FFMessageType.ERROR,
+            data: e.toString(),
+        });
+        return;
+    }
+    if (data instanceof Uint8Array) {
+        trans.push(data.buffer);
+    }
+    self.postMessage({ id, type, data }, trans);
+};
+Pipped by
+Total Received
+$0
+Be the first to PIP
+Event
+Log 내용
+
+Log 내용
+
+Log 내용
