@@ -50,28 +50,27 @@ fileInput.addEventListener('change', function(e) {
 // Step 1: Initialize FFmpeg with LOCAL files
 async function init() {
     try {
-        ffmpeg.on('log', ({ message }) => console.log(message));
-        ffmpeg.on('progress', ({ progress: p }) => {
-            progressBar.value = p * 100;
-            statusDisplay.innerText = `Processing: ${Math.round(p * 100)}%`;
-        });
-
-        // CRITICAL: Using local paths to bypass browser security
+        const status = document.getElementById('status');
+        
+        // GitHub Pages alt klasör yapısı (Project Page) için en güvenli yol budur:
+        const BASE_PATH = window.location.pathname.replace('index.html', '').replace(/\/$/, '');
+        
         await ffmpeg.load({
-            coreURL: './js/ffmpeg-core.js',
-            wasmURL: './js/ffmpeg-core.wasm',
-            workerURL: './js/worker.js'
+            coreURL: `${BASE_PATH}/js/ffmpeg-core.js`,
+            wasmURL: `${BASE_PATH}/js/ffmpeg-core.wasm`,
+            workerURL: `${BASE_PATH}/js/worker.js`
         });
 
         isWasmLoaded = true;
-        statusDisplay.innerText = "✅ System ready. Select a video.";
-        statusDisplay.style.color = "#2da44e";
-        setButtonsState(false); 
+        status.innerText = "✅ System ready. Select a video.";
+        status.style.color = "#2da44e";
+        setButtonsState(false);
     } catch (err) {
-        statusDisplay.innerText = "❌ Initialization failed.";
+        document.getElementById('status').innerText = "❌ Initialization failed.";
         console.error("FFmpeg Load Error:", err);
     }
 }
+
 
 // Step 2: Core Processing Logic
 async function processVideo(mode) {
