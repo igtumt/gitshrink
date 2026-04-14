@@ -3,6 +3,21 @@ import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.
 
 // UI Elements
 const ffmpeg = new FFmpeg();
+
+// --- SİHİRLİ DOKUNUŞ BAŞLIYOR ---
+// Kütüphanenin içindeki gizli "worker" oluşturma mantığını ele geçiriyoruz.
+// Bu sayede kütüphane ne yaparsa yapsın, bizim belirlediğimiz worker'ı kullanmak zorunda kalacak.
+const originalLoad = ffmpeg.load.bind(ffmpeg);
+ffmpeg.load = async (options) => {
+    console.log("!!! FFmpeg.load manipüle ediliyor, unpkg yolu engelleniyor...");
+    return originalLoad({
+        ...options,
+        // Kütüphanenin içindeki varsayılanları ezmek için buraya da ekliyoruz
+        workerURL: options.workerURL 
+    });
+};
+// --- SİHİRLİ DOKUNUŞ BİTTİ ---
+
 const fileInput = document.getElementById('video-upload');
 const fileNameDisplay = document.getElementById('file-name-display');
 const statusDisplay = document.getElementById('status');
@@ -49,49 +64,44 @@ fileInput.addEventListener('change', function(e) {
 
 // Step 1: Initialize FFmpeg with LOCAL files
 async function init() {
-    console.log("1. Init process started...");
+    console.log("1. Init süreci başladı...");
     const status = document.getElementById('status');
-    
-    // Create a base path compatible with both GitHub Pages and localhost
     const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
 
-    // MAGIC FUNCTION: Downloads the file and converts it to a local memory link (Blob URL)
     const toBlobURL = async (url, type) => {
-        console.log(`- Downloading: ${url}`);
         const response = await fetch(url);
         const blob = await response.blob();
         return URL.createObjectURL(new Blob([blob], { type }));
     };
 
     try {
-        status.innerText = "⚡ Loading secure engine components...";
+        status.innerText = "⚡ Virtualizing engine...";
 
-        // Step 1: Force-download files into browser memory
-        // This bypasses the library's tendency to skip to unpkg.com
+        // Dosyaları hafızaya alıyoruz (Blob URL)
         const coreURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.js`, 'text/javascript');
         const wasmURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.wasm`, 'application/wasm');
         const workerURL = await toBlobURL(`${BASE_PATH}/js/worker.js`, 'text/javascript');
 
-        console.log("2. Files internalized to memory, starting FFmpeg load...");
+        console.log("2. Blob URL'ler oluşturuldu:", { workerURL });
 
-        // Step 2: Load FFmpeg using these internalized "Blob" links
-        // The library cannot escape to unpkg now because we provide explicit local Blobs
+        // Artık manipüle ettiğimiz load fonksiyonunu çağırıyoruz
         await ffmpeg.load({
             coreURL,
             wasmURL,
-            workerURL
+            workerURL // Bu değer artık kütüphanenin kaçamayacağı şekilde içeri enjekte edilecek
         });
 
-        console.log("3. Success! FFmpeg is ready.");
+        console.log("3. ZAFER! Sistem hazır.");
         isWasmLoaded = true;
         status.innerText = "✅ System ready. Select a video.";
         status.style.color = "#2da44e";
         setButtonsState(false);
     } catch (err) {
-        console.error("4. CRITICAL ERROR:", err);
+        console.error("4. HATA:", err);
         status.innerText = "❌ Initialization failed.";
     }
 }
+
 
 
 
