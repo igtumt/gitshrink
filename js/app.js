@@ -49,31 +49,43 @@ fileInput.addEventListener('change', function(e) {
 
 // Step 1: Initialize FFmpeg with LOCAL files
 async function init() {
-    console.log("1. Init süreci başladı...");
-    const BASE_PATH = window.location.pathname.replace('index.html', '').replace(/\/$/, '');
-    console.log("2. Base Path:", BASE_PATH);
-
     try {
-        const coreURL = `${BASE_PATH}/js/ffmpeg-core.js`;
-        const wasmURL = `${BASE_PATH}/js/ffmpeg-core.wasm`;
-        const workerURL = `${BASE_PATH}/js/worker.js`;
+        const status = document.getElementById('status');
+        
+        // 1. Önce dosya yollarını tam oluşturuyoruz
+        const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
+        
+        // 2. DOSYALARI ÇEKİP BLOB URL'YE ÇEVİRİYORUZ (SİHİRLİ DOKUNUŞ)
+        // Bu fonksiyon tarayıcının "başka yerden dosya geliyor" uyarısını engeller
+        const toBlobURL = async (url, type) => {
+            const buf = await fetch(url).then(res => res.arrayBuffer());
+            return URL.createObjectURL(new Blob([buf], { type }));
+        };
 
-        console.log("3. Yükleme denenecek yollar:", { coreURL, wasmURL, workerURL });
+        status.innerText = "⚡ Loading engine components...";
 
+        // Dosyaları önce indirip tarayıcı hafızasına alıyoruz
+        const coreURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.js`, 'text/javascript');
+        const wasmURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.wasm`, 'application/wasm');
+        const workerURL = await toBlobURL(`${BASE_PATH}/js/worker.js`, 'text/javascript');
+
+        // 3. ŞİMDİ YÜKLÜYORUZ
         await ffmpeg.load({
             coreURL,
             wasmURL,
             workerURL
         });
 
-        console.log("4. Yükleme BAŞARILI!");
         isWasmLoaded = true;
-        document.getElementById('status').innerText = "✅ System ready.";
+        status.innerText = "✅ System ready. Select a video.";
+        status.style.color = "#2da44e";
+        setButtonsState(false);
     } catch (err) {
-        console.error("5. Yükleme HATASI detayı:", err);
+        console.error("KRİTİK HATA:", err);
         document.getElementById('status').innerText = "❌ Initialization failed.";
     }
 }
+
 
 
 
