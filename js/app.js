@@ -21,7 +21,7 @@ const btns = {
 
 let isWasmLoaded = false;
 
-// Function: Measure video duration
+// Helper: Measure video duration for bitrate calculation
 const getVideoDuration = (file) => new Promise((resolve) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
@@ -37,7 +37,7 @@ function setButtonsState(disabled) {
     Object.values(btns).forEach(btn => btn.disabled = shouldDisable);
 }
 
-// When a file is selected
+// Event: File selection
 fileInput.addEventListener('change', function(e) {
     fileNameDisplay.innerText = e.target.files[0] ? e.target.files[0].name : 'No file selected';
     setButtonsState(false);
@@ -47,7 +47,7 @@ fileInput.addEventListener('change', function(e) {
     downloadArea.innerHTML = '';
 });
 
-// Initialize WASM from local ./js/ folder
+// Step 1: Initialize FFmpeg with LOCAL files
 async function init() {
     try {
         ffmpeg.on('log', ({ message }) => console.log(message));
@@ -56,7 +56,7 @@ async function init() {
             statusDisplay.innerText = `Processing: ${Math.round(p * 100)}%`;
         });
 
-        // Artık tarayıcının güvenlik duvarını aşmak için dosyaları kendi klasörümüzden yüklüyoruz
+        // CRITICAL: Using local paths to bypass browser security
         await ffmpeg.load({
             coreURL: './js/ffmpeg-core.js',
             wasmURL: './js/ffmpeg-core.wasm',
@@ -73,7 +73,7 @@ async function init() {
     }
 }
 
-// Main Processing Function
+// Step 2: Core Processing Logic
 async function processVideo(mode) {
     const videoFile = fileInput.files[0];
     if (!videoFile) return alert('Please select a video file first!');
@@ -91,13 +91,14 @@ async function processVideo(mode) {
         
         try { await ffmpeg.createDir('/work'); } catch (e) {}
         
-        // Fetch file data for the WASM filesystem
+        // Load file into WASM virtual filesystem
         const fileData = await fetchFile(videoFile);
         await ffmpeg.writeFile(`/work/${videoFile.name}`, fileData);
         
         const inputPath = `/work/${videoFile.name}`;
         let command = ['-i', inputPath];
 
+        // Algorithm: Smart Compression for GitHub (<10MB)
         if (mode === 'smart_github') {
             if (inputSizeMB <= 9.5) {
                 statusDisplay.innerText = "Optimizing format only...";
@@ -109,7 +110,7 @@ async function processVideo(mode) {
                 let videoKbps = Math.floor((targetKbits / duration) - audioKbps);
                 if (videoKbps < 50) videoKbps = 50; 
 
-                statusDisplay.innerText = `Calculated bitrate: ${videoKbps} kbps...`;
+                statusDisplay.innerText = `Target bitrate: ${videoKbps} kbps...`;
 
                 let scaleCmd = "scale='min(1280,iw)':-2";
                 if (videoKbps < 400) scaleCmd = "scale='min(854,iw)':-2";
@@ -123,7 +124,7 @@ async function processVideo(mode) {
                     '-preset', 'ultrafast',
                     '-tune', 'fastdecode',
                     '-pix_fmt', 'yuv420p',
-                    '-threads', '2' 
+                    '-threads', '2' // Thermal protection
                 );
             }
         } else if (mode === 'high_compression') {
@@ -136,15 +137,22 @@ async function processVideo(mode) {
 
         command.push('output.mp4');
         const startTime = Date.now();
+        
+        // Execute FFmpeg process
         await ffmpeg.exec(command);
+        
         const processTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
+        // Read resulting file
         const outputData = await ffmpeg.readFile('output.mp4');
         const outputSizeMB = outputData.length / (1024 * 1024);
         const reductionPercent = (((inputSizeMB - outputSizeMB) / inputSizeMB) * 100).toFixed(0);
+        
+        // Create Blob URL for preview and download
         const videoURL = URL.createObjectURL(new Blob([outputData.buffer], { type: 'video/mp4' }));
 
-        statusDisplay.innerText = `✨ Done (${processTime}s)`;
+        // Update UI with results
+        statusDisplay.innerText = `✨ Done in ${processTime}s`;
         
         document.getElementById('stat-before').innerText = `${inputSizeMB.toFixed(1)} MB`;
         document.getElementById('stat-after').innerText = `${outputSizeMB.toFixed(1)} MB`;
@@ -165,19 +173,23 @@ async function processVideo(mode) {
         statusDisplay.innerText = "❌ Processing error.";
         console.error(err);
     } finally {
+        // Memory management: cleanup files
         try { 
             await ffmpeg.deleteFile(`/work/${videoFile.name}`);
             await ffmpeg.deleteFile('output.mp4');
             await ffmpeg.deleteDir('/work'); 
         } catch (e) {}
+        
         setButtonsState(false);
         progressBar.style.display = "none";
     }
 }
 
+// Bind buttons
 btns.github.onclick = () => processVideo('smart_github');
 btns.high.onclick = () => processVideo('high_compression');
 btns.balanced.onclick = () => processVideo('balanced');
 btns.quality.onclick = () => processVideo('high_quality');
 
+// Start the engine
 init();
