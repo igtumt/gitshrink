@@ -49,27 +49,32 @@ fileInput.addEventListener('change', function(e) {
 
 // Step 1: Initialize FFmpeg with LOCAL files
 async function init() {
+    console.log("1. Init süreci başladı...");
+    const BASE_PATH = window.location.pathname.replace('index.html', '').replace(/\/$/, '');
+    console.log("2. Base Path:", BASE_PATH);
+
     try {
-        const status = document.getElementById('status');
-        
-        // GitHub Pages alt klasör yapısı (Project Page) için en güvenli yol budur:
-        const BASE_PATH = window.location.pathname.replace('index.html', '').replace(/\/$/, '');
-        
+        const coreURL = `${BASE_PATH}/js/ffmpeg-core.js`;
+        const wasmURL = `${BASE_PATH}/js/ffmpeg-core.wasm`;
+        const workerURL = `${BASE_PATH}/js/worker.js`;
+
+        console.log("3. Yükleme denenecek yollar:", { coreURL, wasmURL, workerURL });
+
         await ffmpeg.load({
-            coreURL: `${BASE_PATH}/js/ffmpeg-core.js`,
-            wasmURL: `${BASE_PATH}/js/ffmpeg-core.wasm`,
-            workerURL: `${BASE_PATH}/js/worker.js`
+            coreURL,
+            wasmURL,
+            workerURL
         });
 
+        console.log("4. Yükleme BAŞARILI!");
         isWasmLoaded = true;
-        status.innerText = "✅ System ready. Select a video.";
-        status.style.color = "#2da44e";
-        setButtonsState(false);
+        document.getElementById('status').innerText = "✅ System ready.";
     } catch (err) {
+        console.error("5. Yükleme HATASI detayı:", err);
         document.getElementById('status').innerText = "❌ Initialization failed.";
-        console.error("FFmpeg Load Error:", err);
     }
 }
+
 
 
 // Step 2: Core Processing Logic
