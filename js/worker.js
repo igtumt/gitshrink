@@ -149,13 +149,3 @@ self.onmessage = async ({ data: { id, type, data: _data }, }) => {
     }
     self.postMessage({ id, type, data }, trans);
 };
-Pipped by
-Total Received
-$0
-Be the first to PIP
-Event
-Log 내용
-
-Log 내용
-
-Log 내용
