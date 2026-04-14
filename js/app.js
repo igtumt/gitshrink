@@ -53,31 +53,27 @@ fileInput.addEventListener('change', function(e) {
 // Initialize WASM from CDN (with CORS bypass magic)
 async function init() {
     try {
-        ffmpeg.on('log', ({ message }) => console.log(message));
-        ffmpeg.on('progress', ({ progress: p }) => {
-            progressBar.value = p * 100;
-            statusDisplay.innerText = `Processing: ${Math.round(p * 100)}%`;
-        });
-
-        // Sihir Burada: Dosyaları indirip sanki senin sitendeymiş gibi gösteriyoruz
         const coreBaseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
         const ffmpegBaseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm';
 
         await ffmpeg.load({
             coreURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.js`, 'text/javascript'),
             wasmURL: await toBlobURL(`${coreBaseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            // WORKER İÇİN ÖZEL ÖNLEM:
             workerURL: await toBlobURL(`${ffmpegBaseURL}/worker.js`, 'text/javascript')
         });
 
+        // Başarılı olursa buraya geçer
         isWasmLoaded = true;
         statusDisplay.innerText = "✅ System ready. Select a video.";
-        statusDisplay.style.color = "#2da44e";
-        setButtonsState(false); 
+        // ...
     } catch (err) {
+        // Hata devam ederse burası çalışır
         statusDisplay.innerText = "❌ Initialization failed.";
-        console.error("FFmpeg Load Error:", err);
+        console.error(err);
     }
 }
+
 
 
 
