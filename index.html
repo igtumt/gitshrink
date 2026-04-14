@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitShrink - Local Video Compressor</title>
+    
+    <script src="coi-serviceworker.min.js"></script>
+
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="card">
+        <div class="top-links">
+            <a href="https://github.com/igtumt/gitshrink" target="_blank">Star on GitHub</a>
+        </div>
+
+        <h1>GitShrink</h1>
+        <p class="subtitle">Local-first video compressor</p>
+        
+        <div class="upload-area">
+            <label class="custom-file-upload">
+                <input type="file" id="video-upload" accept="video/*">
+                📁 Select Video
+            </label>
+            <div id="file-name-display" class="file-name">No file selected</div>
+        </div>
+
+        <div class="action-buttons">
+            <button id="btn-github" class="btn-primary" disabled>🔥 Optimize for GitHub (<10MB)</button>
+            <div class="secondary-group">
+                <button id="btn-high" class="btn-secondary" disabled>Max Compress</button>
+                <button id="btn-balanced" class="btn-secondary" disabled>Balanced</button>
+                <button id="btn-quality" class="btn-secondary" disabled>High Quality</button>
+            </div>
+        </div>
+        
+        <div id="status">Initializing system...</div>
+        <progress id="progress" value="0" max="100"></progress>
+        
+        <div id="stats-area" class="stats-container">
+            <div class="stat-box">
+                <span>Before</span>
+                <strong id="stat-before">-</strong>
+            </div>
+            <div class="stat-box">
+                <span>After</span>
+                <strong id="stat-after">-</strong>
+            </div>
+            <div class="stat-box success">
+                <span>Reduction</span>
+                <strong id="stat-reduction">-</strong>
+            </div>
+        </div>
+
+        <div id="github-badge">✅ File is under 10MB and ready for GitHub!</div>
+        
+        <video id="video-preview" controls></video>
+        <div id="download-area"></div>
+
+        <div class="support-container">
+            <p class="support-text">Support open-source development:</p>
+            <div class="crypto-box">
+                <strong>ETH / ERC-20:</strong><br>
+                0x30A89Fbf039F676777FEE5EbEB3bF87c346d6329
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
