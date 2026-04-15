@@ -1,14 +1,12 @@
-// FFmpeg 0.11.6 kütüphanesinden gerekli fonksiyonları alıyoruz
 const { createFFmpeg, fetchFile } = FFmpeg;
 
-// FFmpeg nesnesini oluşturuyoruz
 const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
 
 const ffmpeg = createFFmpeg({
     log: true,
-    // Parametreyi siliyoruz ki tarayıcı bir kez indirdikten sonra hep cache'den (hafızadan) anında açsın
-    corePath: `${BASE_PATH}/js/ffmpeg-core.js` 
+    corePath: `${BASE_PATH}/js/ffmpeg-core.js`
 });
+
 
 
 
@@ -62,23 +60,23 @@ fileInput.addEventListener('change', function(e) {
 // ADIM 1: Sistemi Başlatma
 async function init() {
     try {
-        console.log("A. Yükleme komutu gönderildi...");
-        statusDisplay.innerText = "⚡ Loading engine... (This can take 2-3 minutes depending on your connection)";
-        statusDisplay.style.color = "#666";
+        console.log("A. Yükleme süreci başladı...");
+        statusDisplay.innerText = "⚡ Loading engine... Please wait.";
         
-        // Zaman aşımını kaldırıyoruz, sadece yüklenmesini bekliyoruz
+        // Sadece yüklenmesini bekliyoruz, süre sınırı koymuyoruz
         await ffmpeg.load();
 
-        console.log("B. Yükleme başarıyla tamamlandı!");
+        console.log("B. Yükleme BAŞARILI!");
         isWasmLoaded = true;
         statusDisplay.innerText = "✅ System ready. Select a video.";
         statusDisplay.style.color = "#2da44e";
         setButtonsState(false);
     } catch (err) {
-        console.error("Yükleme Sırasında Hata:", err);
-        statusDisplay.innerText = "❌ Initialization failed. Please refresh.";
+        console.error("Yükleme Hatası:", err);
+        statusDisplay.innerText = "❌ Initialization failed. Refresh page.";
     }
 }
+
 
 
 
