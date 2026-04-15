@@ -2,11 +2,14 @@
 const { createFFmpeg, fetchFile } = FFmpeg;
 
 // FFmpeg nesnesini oluşturuyoruz
+const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
+
 const ffmpeg = createFFmpeg({
     log: true,
-    // GitHub Pages'ta en güvenli yol budur:
-    corePath: 'https://igtumt.github.io/gitshrink/js/ffmpeg-core.js'
+    // Dinamik yol sayesinde dosya nerede olursa olsun bulur
+    corePath: `${BASE_PATH}/js/ffmpeg-core.js`
 });
+
 
 
 // UI Elementleri
