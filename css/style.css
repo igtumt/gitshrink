@@ -1,71 +1,120 @@
-body { 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    display: flex; align-items: center; justify-content: center; 
-    min-height: 100vh; background: #f4f7f9; margin: 0; padding: 20px; 
+:root {
+    --primary: #0969da;
+    --bg: #f6f8fa;
+    --card-bg: #ffffff;
+    --text: #1f2328;
+    --border: #d0d7de;
+    --success: #2da44e;
 }
 
-.card { 
-    background: white; padding: 40px; border-radius: 20px; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; 
-    max-width: 550px; width: 100%; position: relative; 
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 20px;
 }
 
-.top-links { position: absolute; top: 20px; right: 25px; font-size: 14px; }
-.top-links a { color: #5f6368; text-decoration: none; font-weight: 600; }
-
-h1 { color: #1a73e8; margin-bottom: 5px; font-size: 28px; }
-.subtitle { color: #5f6368; margin-bottom: 25px; font-size: 15px; }
-
-.upload-area { 
-    border: 2px dashed #dadce0; padding: 30px; border-radius: 12px; 
-    margin-bottom: 25px; background: #fafafa; 
+.container {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    text-align: center;
 }
 
-input[type="file"] { display: none; }
+h1 { color: var(--primary); margin-bottom: 8px; }
+.subtitle { color: #636c76; margin-bottom: 30px; font-size: 14px; }
 
+/* Upload Area */
+.upload-box {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 30px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.upload-box:hover { border-color: var(--primary); }
+#file-name-display { font-size: 12px; margin-top: 10px; color: #636c76; }
 
-.custom-file-upload { 
-    display: inline-block; padding: 10px 20px; cursor: pointer; 
-    background-color: #e8f0fe; color: #1a73e8; font-weight: bold; 
-    border-radius: 6px; border: 1px solid #d2e3fc; 
+/* Status & Progress */
+#status { font-size: 14px; margin: 20px 0; font-weight: 500; }
+
+progress {
+    width: 100%;
+    height: 10px;
+    appearance: none;
+    display: none;
+    margin-bottom: 20px;
+}
+progress::-webkit-progress-bar { background-color: #ebf0f4; border-radius: 5px; }
+progress::-webkit-progress-value { 
+    background-color: var(--primary); 
+    border-radius: 5px; 
+    transition: width 0.3s ease; 
 }
 
-.action-buttons { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-.btn-primary { 
-    background: #1a73e8; color: white; border: none; padding: 16px 20px; 
-    border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; 
+/* Buttons */
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.secondary-group { display: flex; gap: 10px; }
-.btn-secondary { 
-    flex: 1; background: #f8f9fa; color: #3c4043; border: 1px solid #dadce0; 
-    padding: 12px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; 
+button {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #f6f8fa;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
-button:disabled { opacity: 0.6; cursor: not-allowed; }
+button:hover:not(:disabled) { background: #eff2f5; border-color: #8c959f; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-#status { margin-top: 20px; font-weight: 500; color: #3c4043; font-size: 14px; }
-progress { width: 100%; height: 8px; margin-top: 15px; border-radius: 4px; display: none; }
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 10px;
+    border: none;
+}
+.btn-primary:hover:not(:disabled) { background-color: #0c59b3; }
 
-.stats-container { 
-    display: none; justify-content: space-between; background: #f8f9fa; 
-    border: 1px solid #dadce0; border-radius: 12px; padding: 15px; margin-top: 20px; 
+/* Results */
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #f6f8fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+.stat-item span { display: block; font-size: 12px; color: #636c76; }
+.stat-item b { font-size: 16px; }
+
+#video-preview {
+    width: 100%;
+    border-radius: 8px;
+    margin-top: 20px;
+    border: 1px solid var(--border);
 }
 
-.stat-box { display: flex; flex-direction: column; align-items: center; width: 33%; }
-.stat-box:not(:last-child) { border-right: 1px solid #dadce0; }
-.stat-box span { font-size: 11px; color: #5f6368; text-transform: uppercase; }
-.stat-box strong { font-size: 18px; color: #3c4043; }
-
-#github-badge { 
-    display: none; background: #e6ffec; color: #24292f; border: 1px solid #31ad52; 
-    padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 14px; font-weight: 600; 
-}
-
-video { width: 100%; margin-top: 25px; border-radius: 12px; display: none; border: 1px solid #dadce0; }
-
-.support-container { margin-top: 35px; border-top: 1px solid #eee; padding-top: 20px; }
-.crypto-box { 
-    font-size: 11px; background: #f1f3f4; padding: 12px; border-radius: 8px; 
-    color: #5f6368; word-break: break-all; margin-top: 10px; 
+.badge-success {
+    background: #dafbe1;
+    color: #1a7f37;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 15px;
 }
