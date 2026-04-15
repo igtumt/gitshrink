@@ -1,77 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitShrink - Local Video Compressor</title>
-    
-    <script src="coi-serviceworker.min.js?v=2"></script>
 
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-
-
-    
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-
-    <div class="card">
-        <div class="top-links">
-            <a href="https://github.com/igtumt/gitshrink" target="_blank">Star on GitHub</a>
-        </div>
-
-        <h1>GitShrink</h1>
-        <p class="subtitle">Local-first video compressor</p>
-        
-        <div class="upload-area">
-            <label class="custom-file-upload">
-                <input type="file" id="video-upload" accept="video/*">
-                📁 Select Video
-            </label>
-            <div id="file-name-display" class="file-name">No file selected</div>
-        </div>
-
-        <div class="action-buttons">
-            <button id="btn-github" class="btn-primary" disabled>🔥 Optimize for GitHub (<10MB)</button>
-            <div class="secondary-group">
-                <button id="btn-high" class="btn-secondary" disabled>Max Compress</button>
-                <button id="btn-balanced" class="btn-secondary" disabled>Balanced</button>
-                <button id="btn-quality" class="btn-secondary" disabled>High Quality</button>
-            </div>
-        </div>
-        
-        <div id="status">Initializing system...</div>
-        <progress id="progress" value="0" max="100"></progress>
-        
-        <div id="stats-area" class="stats-container">
-            <div class="stat-box">
-                <span>Before</span>
-                <strong id="stat-before">-</strong>
-            </div>
-            <div class="stat-box">
-                <span>After</span>
-                <strong id="stat-after">-</strong>
-            </div>
-            <div class="stat-box success">
-                <span>Reduction</span>
-                <strong id="stat-reduction">-</strong>
-            </div>
-        </div>
-
-        <div id="github-badge">✅ File is under 10MB and ready for GitHub!</div>
-        
-        <video id="video-preview" controls></video>
-        <div id="download-area"></div>
-
-        <div class="support-container">
-            <p class="support-text">Support open-source development:</p>
-            <div class="crypto-box">
-                <strong>ETH / ERC-20:</strong><br>
-                0x30A89Fbf039F676777FEE5EbEB3bF87c346d6329
-            </div>
-        </div>
-    </div>
-
-    <script src="js/app.js"></script>
-</body>
-</html>
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>GitShrink - Local Video Compressor</title>
+                    <link rel="stylesheet" href="style.css">
+                    <script src="js/coi-serviceworker.min.js"></script>
+                    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+                </head>
+                <body>
+                
+                <div class="container">
+                    <h1>GitShrink</h1>
+                    <p class="subtitle">Local-first video compressor</p>
+                
+                    <div class="upload-box" onclick="document.getElementById('video-upload').click()">
+                        <input type="file" id="video-upload" accept="video/*" hidden>
+                        <span style="font-size: 24px;">📁</span>
+                        <div style="margin-top: 10px; font-weight: 600;">Select Video</div>
+                        <div id="file-name-display">No file selected</div>
+                    </div>
+                
+                    <button id="btn-github" class="btn-primary" disabled>🔥 Optimize for GitHub (&lt;10MB)</button>
+                
+                    <div class="button-grid">
+                        <button id="id-high" id="btn-high" disabled>Max Compress</button>
+                        <button id="id-balanced" id="btn-balanced" disabled>Balanced</button>
+                        <button id="id-quality" id="btn-quality" disabled>High Quality</button>
+                    </div>
+                
+                    <div id="status">⚡ Loading engine... (This takes 1-2 mins for the first time)</div>
+                    <progress id="progress" value="0" max="100" style="display: none;"></progress>
+                
+                    <div id="stats-area" class="stats" style="display: none;">
+                        <div class="stat-item"><span>BEFORE</span><b id="stat-before">-</b></div>
+                        <div class="stat-item"><span>AFTER</span><b id="stat-after">-</b></div>
+                        <div class="stat-item"><span>REDUCTION</span><b id="stat-reduction">-</b></div>
+                    </div>
+                
+                    <div id="github-badge" class="badge-success" style="display: none;">
+                        ✅ File is under 10MB and ready for GitHub!
+                    </div>
+                
+                    <video id="video-preview" controls style="display: none;"></video>
+                    
+                    <div id="download-area"></div>
+                    
+                    <div style="margin-top: 30px; font-size: 11px; color: #8c959f;">
+                        Support open-source development:<br>
+                        ETH / ERC-20: 0x30A89Fbf039F676777FEE5EbEB3bF87c346d6329
+                        
+                    </div>
+                </div>
+                
+                <script src="js/app.js"></script>
+                </body>
+                </html>
+                

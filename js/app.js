@@ -9,8 +9,8 @@ const progressBar = document.getElementById('progress');
 // FFmpeg Nesnesi ve Progress Dinleyicisi
 const ffmpeg = createFFmpeg({
     log: true,
+    // ÖNEMLİ: v=... parametresini kaldırdık ki tarayıcı hafızasını (cache) kullansın
     corePath: `${BASE_PATH}/js/ffmpeg-core.js`,
-    // İlerleme yüzdesini yakalayan kısım
     progress: ({ ratio }) => {
         if (ratio >= 0 && ratio <= 1) {
             const percentage = Math.round(ratio * 100);
@@ -31,9 +31,9 @@ const downloadArea = document.getElementById('download-area');
 
 const btns = {
     github: document.getElementById('btn-github'),
-    high: document.getElementById('btn-high'),
-    balanced: document.getElementById('btn-balanced'),
-    quality: document.getElementById('btn-quality')
+    high: document.getElementById('id-high'),
+    balanced: document.getElementById('id-balanced'),
+    quality: document.getElementById('id-quality')
 };
 
 let isWasmLoaded = false;
@@ -71,7 +71,7 @@ fileInput.addEventListener('change', function(e) {
 // Başlatma (Init)
 async function init() {
     try {
-        statusDisplay.innerText = "⚡ Loading secure engine... Please wait.";
+        statusDisplay.innerText = "⚡ Loading engine... (This takes 1-2 mins for the first time)";
         await ffmpeg.load();
         isWasmLoaded = true;
         statusDisplay.innerText = "✅ System ready. Select a video.";
@@ -152,7 +152,7 @@ async function processVideo(mode) {
         if (outputSizeMB <= 10.2) githubBadge.style.display = "block";
         
         downloadArea.innerHTML = `
-            <a href="${videoURL}" download="gitshrink_compressed.mp4" class="btn-primary" style="display:inline-block; text-decoration:none; margin-top:15px;">
+            <a href="${videoURL}" download="gitshrink_compressed.mp4" class="btn-primary" style="display:inline-block; text-decoration:none; margin-top:15px; border-radius:6px; font-weight:600;">
                 💾 Download MP4
             </a>`;
 
@@ -169,6 +169,7 @@ async function processVideo(mode) {
     }
 }
 
+// Buton Atamaları
 btns.github.onclick = () => processVideo('smart_github');
 btns.high.onclick = () => processVideo('high_compression');
 btns.balanced.onclick = () => processVideo('balanced');
