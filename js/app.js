@@ -104,23 +104,32 @@ async function processVideo(mode) {
         
         let args = ['-i', 'input.mp4'];
 
-        if (mode === 'smart_github') {
-            const targetMB = 9.5;
-            const targetKbits = targetMB * 8192;
-            const audioKbps = 128;
-            let videoKbps = Math.floor((targetKbits / duration) - audioKbps);
-            if (videoKbps < 50) videoKbps = 50;
+        // app.js içindeki ilgili kısmı bununla güncelle:
+if (mode === 'smart_github') {
+    const targetMB = 9.5; // GitHub sınırı 10MB ama 9.5MB daha güvenli
+    const targetKbits = targetMB * 8192; // MB'ı bit'e çeviriyoruz
+    const audioKbps = 128;
+    
+    // Hedef video bitrate hesabı: (Toplam Bit / Süre) - Ses Bitrate
+    let videoKbps = Math.floor((targetKbits / duration) - audioKbps);
+    
+    // Çok düşük bitrate videoyu çamurlaştırır, alt sınır koyuyoruz
+    if (videoKbps < 150) videoKbps = 150; 
 
-            let scale = videoKbps < 400 ? "scale='min(854,iw)':-2" : "scale='min(1280,iw)':-2";
+    // Bitrate çok düşükse çözünürlüğü de düşür ki piksellenme azalsın
+    let scale = videoKbps < 500 ? "scale='min(854,iw)':-2" : "scale='min(1280,iw)':-2";
 
-            args.push(
-                '-vf', scale,
-                '-c:v', 'libx264',
-                '-b:v', `${videoKbps}k`,
-                '-preset', 'ultrafast',
-                '-pix_fmt', 'yuv420p'
-            );
-        } else if (mode === 'high_compression') {
+    args.push(
+        '-vf', scale,
+        '-c:v', 'libx264',
+        '-b:v', `${videoKbps}k`,
+        '-maxrate', `${videoKbps}k`,
+        '-bufsize', `${videoKbps * 2}k`,
+        '-preset', 'ultrafast',
+        '-pix_fmt', 'yuv420p'
+    );
+}
+ else if (mode === 'high_compression') {
             args.push('-vf', "scale='min(854,iw)':-2", '-c:v', 'libx264', '-crf', '30', '-preset', 'ultrafast');
         } else if (mode === 'balanced') {
             args.push('-vf', "scale='min(1280,iw)':-2", '-c:v', 'libx264', '-crf', '26', '-preset', 'ultrafast');
