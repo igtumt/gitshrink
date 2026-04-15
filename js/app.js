@@ -6,9 +6,10 @@ const BASE_PATH = window.location.origin + window.location.pathname.replace('ind
 
 const ffmpeg = createFFmpeg({
     log: true,
-    // Dinamik yol sayesinde dosya nerede olursa olsun bulur
-    corePath: `${BASE_PATH}/js/ffmpeg-core.js`
+    // Sonuna rastgele bir sayı ekleyerek her seferinde taze dosya çekmesini sağlıyoruz
+    corePath: `${BASE_PATH}/js/ffmpeg-core.js?v=${Date.now()}`
 });
+
 
 
 
@@ -60,20 +61,28 @@ fileInput.addEventListener('change', function(e) {
 // ADIM 1: Sistemi Başlatma
 async function init() {
     try {
-        statusDisplay.innerText = "⚡ Loading secure engine (v0.11.6)...";
+        console.log("A. Yükleme komutu gönderildi...");
+        statusDisplay.innerText = "⚡ Initializing engine... (this may take 10-20s)";
         
-        // FFmpeg 0.11.x yükleme başlatma
-        await ffmpeg.load();
+        // Zaman aşımı koruması ekleyelim
+        const loadPromise = ffmpeg.load();
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Yükleme çok uzun sürdü!")), 30000)
+        );
 
+        await Promise.race([loadPromise, timeoutPromise]);
+
+        console.log("B. Yükleme tamamlandı!");
         isWasmLoaded = true;
         statusDisplay.innerText = "✅ System ready. Select a video.";
         statusDisplay.style.color = "#2da44e";
         setButtonsState(false);
     } catch (err) {
-        statusDisplay.innerText = "❌ Initialization failed.";
-        console.error("FFmpeg v0.11 Load Error:", err);
+        console.error("Yükleme Sırasında Hata:", err);
+        statusDisplay.innerText = "❌ Initialization stuck or failed.";
     }
 }
+
 
 // ADIM 2: Video İşleme Mantığı
 async function processVideo(mode) {
