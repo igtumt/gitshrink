@@ -1,23 +1,14 @@
-import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+// FFmpeg 0.11.6 kütüphanesinden gerekli fonksiyonları alıyoruz
+const { createFFmpeg, fetchFile } = FFmpeg;
 
-// UI Elements
-const ffmpeg = new FFmpeg();
+// FFmpeg nesnesini oluşturuyoruz
+const ffmpeg = createFFmpeg({
+    log: true,
+    // Yerel çekirdek dosyasının yolu (0.11.0 sürümü olmalı)
+    corePath: './js/ffmpeg-core.js'
+});
 
-// --- SİHİRLİ DOKUNUŞ BAŞLIYOR ---
-// Kütüphanenin içindeki gizli "worker" oluşturma mantığını ele geçiriyoruz.
-// Bu sayede kütüphane ne yaparsa yapsın, bizim belirlediğimiz worker'ı kullanmak zorunda kalacak.
-const originalLoad = ffmpeg.load.bind(ffmpeg);
-ffmpeg.load = async (options) => {
-    console.log("!!! FFmpeg.load manipüle ediliyor, unpkg yolu engelleniyor...");
-    return originalLoad({
-        ...options,
-        // Kütüphanenin içindeki varsayılanları ezmek için buraya da ekliyoruz
-        workerURL: options.workerURL 
-    });
-};
-// --- SİHİRLİ DOKUNUŞ BİTTİ ---
-
+// UI Elementleri
 const fileInput = document.getElementById('video-upload');
 const fileNameDisplay = document.getElementById('file-name-display');
 const statusDisplay = document.getElementById('status');
@@ -36,7 +27,7 @@ const btns = {
 
 let isWasmLoaded = false;
 
-// Helper: Measure video duration for bitrate calculation
+// Yardımcı: Video süresini ölçer (Bitrate hesabı için)
 const getVideoDuration = (file) => new Promise((resolve) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
@@ -52,7 +43,7 @@ function setButtonsState(disabled) {
     Object.values(btns).forEach(btn => btn.disabled = shouldDisable);
 }
 
-// Event: File selection
+// Dosya seçildiğinde
 fileInput.addEventListener('change', function(e) {
     fileNameDisplay.innerText = e.target.files[0] ? e.target.files[0].name : 'No file selected';
     setButtonsState(false);
@@ -62,133 +53,84 @@ fileInput.addEventListener('change', function(e) {
     downloadArea.innerHTML = '';
 });
 
-// Step 1: Initialize FFmpeg with LOCAL files
+// ADIM 1: Sistemi Başlatma
 async function init() {
-    console.log("1. Init süreci başladı...");
-    const status = document.getElementById('status');
-    const BASE_PATH = window.location.origin + window.location.pathname.replace('index.html', '').replace(/\/$/, '');
-
-    const toBlobURL = async (url, type) => {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return URL.createObjectURL(new Blob([blob], { type }));
-    };
-
     try {
-        status.innerText = "⚡ Virtualizing engine...";
+        statusDisplay.innerText = "⚡ Loading secure engine (v0.11.6)...";
+        
+        // FFmpeg 0.11.x yükleme başlatma
+        await ffmpeg.load();
 
-        // Dosyaları hafızaya alıyoruz (Blob URL)
-        const coreURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.js`, 'text/javascript');
-        const wasmURL = await toBlobURL(`${BASE_PATH}/js/ffmpeg-core.wasm`, 'application/wasm');
-        const workerURL = await toBlobURL(`${BASE_PATH}/js/worker.js`, 'text/javascript');
-
-        console.log("2. Blob URL'ler oluşturuldu:", { workerURL });
-
-        // Artık manipüle ettiğimiz load fonksiyonunu çağırıyoruz
-        await ffmpeg.load({
-            coreURL,
-            wasmURL,
-            workerURL // Bu değer artık kütüphanenin kaçamayacağı şekilde içeri enjekte edilecek
-        });
-
-        console.log("3. ZAFER! Sistem hazır.");
         isWasmLoaded = true;
-        status.innerText = "✅ System ready. Select a video.";
-        status.style.color = "#2da44e";
+        statusDisplay.innerText = "✅ System ready. Select a video.";
+        statusDisplay.style.color = "#2da44e";
         setButtonsState(false);
     } catch (err) {
-        console.error("4. HATA:", err);
-        status.innerText = "❌ Initialization failed.";
+        statusDisplay.innerText = "❌ Initialization failed.";
+        console.error("FFmpeg v0.11 Load Error:", err);
     }
 }
 
-
-
-
-
-
-
-// Step 2: Core Processing Logic
+// ADIM 2: Video İşleme Mantığı
 async function processVideo(mode) {
     const videoFile = fileInput.files[0];
-    if (!videoFile) return alert('Please select a video file first!');
+    if (!videoFile) return alert('Please select a video file!');
 
     const inputSizeMB = videoFile.size / (1024 * 1024);
     setButtonsState(true);
     githubBadge.style.display = "none";
     statsArea.style.display = "none";
     progressBar.style.display = "block";
-    statusDisplay.innerText = "⚡ Preparing system...";
-    statusDisplay.style.color = "#3c4043";
+    statusDisplay.innerText = "⚡ Preparing video...";
 
     try {
         const duration = await getVideoDuration(videoFile);
         
-        try { await ffmpeg.createDir('/work'); } catch (e) {}
+        // Dosyayı sanal sisteme yazıyoruz
+        ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(videoFile));
         
-        // Load file into WASM virtual filesystem
-        const fileData = await fetchFile(videoFile);
-        await ffmpeg.writeFile(`/work/${videoFile.name}`, fileData);
-        
-        const inputPath = `/work/${videoFile.name}`;
-        let command = ['-i', inputPath];
+        let args = ['-i', 'input.mp4'];
 
-        // Algorithm: Smart Compression for GitHub (<10MB)
         if (mode === 'smart_github') {
-            if (inputSizeMB <= 9.5) {
-                statusDisplay.innerText = "Optimizing format only...";
-                command.push('-c:v', 'libx264', '-crf', '22', '-preset', 'ultrafast', '-threads', '2');
-            } else {
-                const targetMB = 9.5;
-                const targetKbits = targetMB * 8192;
-                const audioKbps = 128; 
-                let videoKbps = Math.floor((targetKbits / duration) - audioKbps);
-                if (videoKbps < 50) videoKbps = 50; 
+            const targetMB = 9.5;
+            const targetKbits = targetMB * 8192;
+            const audioKbps = 128;
+            let videoKbps = Math.floor((targetKbits / duration) - audioKbps);
+            if (videoKbps < 50) videoKbps = 50;
 
-                statusDisplay.innerText = `Target bitrate: ${videoKbps} kbps...`;
+            let scale = videoKbps < 400 ? "scale='min(854,iw)':-2" : "scale='min(1280,iw)':-2";
 
-                let scaleCmd = "scale='min(1280,iw)':-2";
-                if (videoKbps < 400) scaleCmd = "scale='min(854,iw)':-2";
-
-                command.push(
-                    '-vf', scaleCmd,
-                    '-c:v', 'libx264',
-                    '-b:v', `${videoKbps}k`,
-                    '-maxrate', `${Math.floor(videoKbps * 1.5)}k`,
-                    '-bufsize', `${videoKbps * 2}k`,
-                    '-preset', 'ultrafast',
-                    '-tune', 'fastdecode',
-                    '-pix_fmt', 'yuv420p',
-                    '-threads', '2' // Thermal protection
-                );
-            }
+            args.push(
+                '-vf', scale,
+                '-c:v', 'libx264',
+                '-b:v', `${videoKbps}k`,
+                '-preset', 'ultrafast',
+                '-pix_fmt', 'yuv420p'
+            );
         } else if (mode === 'high_compression') {
-            command.push('-vf', "scale='min(854,iw)':-2", '-c:v', 'libx264', '-crf', '30', '-preset', 'ultrafast', '-threads', '2');
+            args.push('-vf', "scale='min(854,iw)':-2", '-c:v', 'libx264', '-crf', '30', '-preset', 'ultrafast');
         } else if (mode === 'balanced') {
-            command.push('-vf', "scale='min(1280,iw)':-2", '-c:v', 'libx264', '-crf', '26', '-preset', 'ultrafast', '-threads', '2');
+            args.push('-vf', "scale='min(1280,iw)':-2", '-c:v', 'libx264', '-crf', '26', '-preset', 'ultrafast');
         } else if (mode === 'high_quality') {
-            command.push('-c:v', 'libx264', '-crf', '22', '-preset', 'ultrafast', '-threads', '2');
+            args.push('-c:v', 'libx264', '-crf', '22', '-preset', 'ultrafast');
         }
 
-        command.push('output.mp4');
+        args.push('output.mp4');
+
         const startTime = Date.now();
-        
-        // Execute FFmpeg process
-        await ffmpeg.exec(command);
-        
+        // FFmpeg komutunu çalıştır
+        await ffmpeg.run(...args);
         const processTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-        // Read resulting file
-        const outputData = await ffmpeg.readFile('output.mp4');
-        const outputSizeMB = outputData.length / (1024 * 1024);
+        // Çıktıyı oku
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+        const outputSizeMB = data.length / (1024 * 1024);
         const reductionPercent = (((inputSizeMB - outputSizeMB) / inputSizeMB) * 100).toFixed(0);
         
-        // Create Blob URL for preview and download
-        const videoURL = URL.createObjectURL(new Blob([outputData.buffer], { type: 'video/mp4' }));
+        const videoURL = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
 
-        // Update UI with results
+        // UI Güncelle
         statusDisplay.innerText = `✨ Done in ${processTime}s`;
-        
         document.getElementById('stat-before').innerText = `${inputSizeMB.toFixed(1)} MB`;
         document.getElementById('stat-after').innerText = `${outputSizeMB.toFixed(1)} MB`;
         document.getElementById('stat-reduction').innerText = `%${reductionPercent}`;
@@ -200,31 +142,29 @@ async function processVideo(mode) {
         if (outputSizeMB <= 10.2) githubBadge.style.display = "block";
         
         downloadArea.innerHTML = `
-            <a href="${videoURL}" download="gitshrink_output.mp4" class="btn-primary" style="display:inline-block; text-decoration:none; margin-top:15px;">
+            <a href="${videoURL}" download="gitshrink_compressed.mp4" class="btn-primary" style="display:inline-block; text-decoration:none; margin-top:15px;">
                 💾 Download MP4
             </a>`;
-            
+
     } catch (err) {
         statusDisplay.innerText = "❌ Processing error.";
         console.error(err);
     } finally {
-        // Memory management: cleanup files
-        try { 
-            await ffmpeg.deleteFile(`/work/${videoFile.name}`);
-            await ffmpeg.deleteFile('output.mp4');
-            await ffmpeg.deleteDir('/work'); 
+        // Bellek temizliği
+        try {
+            ffmpeg.FS('unlink', 'input.mp4');
+            ffmpeg.FS('unlink', 'output.mp4');
         } catch (e) {}
-        
         setButtonsState(false);
         progressBar.style.display = "none";
     }
 }
 
-// Bind buttons
+// Buton bağlamaları
 btns.github.onclick = () => processVideo('smart_github');
 btns.high.onclick = () => processVideo('high_compression');
 btns.balanced.onclick = () => processVideo('balanced');
 btns.quality.onclick = () => processVideo('high_quality');
 
-// Start the engine
+// Başlat
 init();
