@@ -6,9 +6,10 @@ const BASE_PATH = window.location.origin + window.location.pathname.replace('ind
 
 const ffmpeg = createFFmpeg({
     log: true,
-    // Sonuna rastgele bir sayı ekleyerek her seferinde taze dosya çekmesini sağlıyoruz
-    corePath: `${BASE_PATH}/js/ffmpeg-core.js?v=${Date.now()}`
+    // Parametreyi siliyoruz ki tarayıcı bir kez indirdikten sonra hep cache'den (hafızadan) anında açsın
+    corePath: `${BASE_PATH}/js/ffmpeg-core.js` 
 });
+
 
 
 
@@ -62,26 +63,23 @@ fileInput.addEventListener('change', function(e) {
 async function init() {
     try {
         console.log("A. Yükleme komutu gönderildi...");
-        statusDisplay.innerText = "⚡ Initializing engine... (this may take 10-20s)";
+        statusDisplay.innerText = "⚡ Loading engine... (This can take 2-3 minutes depending on your connection)";
+        statusDisplay.style.color = "#666";
         
-        // Zaman aşımı koruması ekleyelim
-        const loadPromise = ffmpeg.load();
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Yükleme çok uzun sürdü!")), 30000)
-        );
+        // Zaman aşımını kaldırıyoruz, sadece yüklenmesini bekliyoruz
+        await ffmpeg.load();
 
-        await Promise.race([loadPromise, timeoutPromise]);
-
-        console.log("B. Yükleme tamamlandı!");
+        console.log("B. Yükleme başarıyla tamamlandı!");
         isWasmLoaded = true;
         statusDisplay.innerText = "✅ System ready. Select a video.";
         statusDisplay.style.color = "#2da44e";
         setButtonsState(false);
     } catch (err) {
         console.error("Yükleme Sırasında Hata:", err);
-        statusDisplay.innerText = "❌ Initialization stuck or failed.";
+        statusDisplay.innerText = "❌ Initialization failed. Please refresh.";
     }
 }
+
 
 
 // ADIM 2: Video İşleme Mantığı
