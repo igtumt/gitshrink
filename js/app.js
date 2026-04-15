@@ -4,9 +4,10 @@ const { createFFmpeg, fetchFile } = FFmpeg;
 // FFmpeg nesnesini oluşturuyoruz
 const ffmpeg = createFFmpeg({
     log: true,
-    // Yerel çekirdek dosyasının yolu (0.11.0 sürümü olmalı)
-    corePath: './js/ffmpeg-core.js'
+    // GitHub Pages'ta en güvenli yol budur:
+    corePath: 'https://igtumt.github.io/gitshrink/js/ffmpeg-core.js'
 });
+
 
 // UI Elementleri
 const fileInput = document.getElementById('video-upload');
