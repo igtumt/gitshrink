@@ -103,7 +103,7 @@ Just a tool that does one thing well.
 
 - WebAssembly (WASM)
 - FFmpeg (compiled to WASM)
-- Vanilla JS / Frontend
+- JS / Frontend
 
 ---
 
